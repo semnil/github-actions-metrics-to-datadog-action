@@ -10,7 +10,7 @@ export interface Inputs {
 
 export const getInputs = (): Inputs => {
   const githubToken = getInput('github-token');
-  const datadogApiKey = getInput('datadog-api-key', { required: true });
+  const datadogApiKey = getInput('datadog-api-key', { required: false });
   const enableWorkflowMetrics =
     getInput('enable-workflow-metrics', { required: true }) === 'true';
   const enableOwnerMetrics =
