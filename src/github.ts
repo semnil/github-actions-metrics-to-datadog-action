@@ -1,3 +1,4 @@
+import retry from 'async-retry';
 import { Endpoints } from '@octokit/types';
 import { Context } from '@actions/github/lib/context';
 import { Octokit } from '@octokit/core';
@@ -81,18 +82,33 @@ const requestActionsBilling = async (
   octokit: Octokit,
 ): Promise<BillingResponse> => {
   const owner = context.repo.owner;
-  try {
-    return await octokit.request('GET /orgs/{org}/settings/billing/actions', {
-      org: owner,
-    });
-  } catch (err) {
-    return await octokit.request(
-      'GET /users/{username}/settings/billing/actions',
-      {
-        username: owner,
-      },
-    );
-  }
+
+  return await retry(
+    async () => {
+      try {
+        return await octokit.request(
+          'GET /orgs/{org}/settings/billing/actions',
+          {
+            org: owner,
+          },
+        );
+      } catch (err) {
+        return await octokit.request(
+          'GET /users/{username}/settings/billing/actions',
+          {
+            username: owner,
+          },
+        );
+      }
+    },
+    {
+      retries: 3,
+      factor: 3,
+      minTimeout: 1 * 1000,
+      maxTimeout: 30 * 1000,
+      randomize: true,
+    },
+  );
 };
 
 export type Workflow =
@@ -109,9 +125,20 @@ export const getRepositoryWorkflowsAndBillings = async (
 ): Promise<[Workflow, RepositoryWorkflowBilling][]> => {
   const owner = context.repo.owner;
   const repo = context.repo.repo;
-  const workflowsRes = await octokit.request(
-    'GET /repos/{owner}/{repo}/actions/workflows',
-    { owner, repo },
+  const workflowsRes = await retry(
+    async () => {
+      return await octokit.request(
+        'GET /repos/{owner}/{repo}/actions/workflows',
+        { owner, repo },
+      );
+    },
+    {
+      retries: 3,
+      factor: 3,
+      minTimeout: 1 * 1000,
+      maxTimeout: 30 * 1000,
+      randomize: true,
+    },
   );
   const workflows = workflowsRes.data.workflows.filter(
     w => w.state === 'active',
@@ -119,12 +146,23 @@ export const getRepositoryWorkflowsAndBillings = async (
   const billingPromises: Promise<[Workflow, RepositoryWorkflowBilling]>[] =
     workflows.map(async workflow => {
       return new Promise(async resolved => {
-        const res = await octokit.request(
-          'GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing',
+        const res = await retry(
+          async () => {
+            return await octokit.request(
+              'GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing',
+              {
+                owner,
+                repo,
+                workflow_id: workflow.id,
+              },
+            );
+          },
           {
-            owner,
-            repo,
-            workflow_id: workflow.id,
+            retries: 3,
+            factor: 3,
+            minTimeout: 1 * 1000,
+            maxTimeout: 30 * 1000,
+            randomize: true,
           },
         );
         resolved([workflow, res.data.billable]);
