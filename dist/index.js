@@ -66,6 +66,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getRepositoryWorkflowsAndBillings = exports.getActionsBillingData = exports.getWorkflowDuration = exports.parseWorkflowRun = void 0;
 const async_retry_1 = __importDefault(__nccwpck_require__(3415));
+const core_1 = __nccwpck_require__(2186);
 const parseWorkflowRun = (payload) => {
     return {
         id: payload.id,
@@ -96,14 +97,20 @@ const requestActionsBilling = (context, octokit) => __awaiter(void 0, void 0, vo
     const owner = context.repo.owner;
     return yield (0, async_retry_1.default)(() => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            return yield octokit.request('GET /orgs/{org}/settings/billing/actions', {
-                org: owner,
-            });
+            try {
+                return yield octokit.request('GET /orgs/{org}/settings/billing/actions', {
+                    org: owner,
+                });
+            }
+            catch (err) {
+                return yield octokit.request('GET /users/{username}/settings/billing/actions', {
+                    username: owner,
+                });
+            }
         }
-        catch (err) {
-            return yield octokit.request('GET /users/{username}/settings/billing/actions', {
-                username: owner,
-            });
+        catch (e) {
+            (0, core_1.warning)(`[WARN] ${e}`);
+            throw e;
         }
     }), {
         retries: 3,
@@ -117,7 +124,13 @@ const getRepositoryWorkflowsAndBillings = (context, octokit) => __awaiter(void 0
     const owner = context.repo.owner;
     const repo = context.repo.repo;
     const workflowsRes = yield (0, async_retry_1.default)(() => __awaiter(void 0, void 0, void 0, function* () {
-        return yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows', { owner, repo });
+        try {
+            return yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows', { owner, repo });
+        }
+        catch (e) {
+            (0, core_1.warning)(`[WARN] ${e}`);
+            throw e;
+        }
     }), {
         retries: 3,
         factor: 3,
@@ -129,11 +142,17 @@ const getRepositoryWorkflowsAndBillings = (context, octokit) => __awaiter(void 0
     const billingPromises = workflows.map((workflow) => __awaiter(void 0, void 0, void 0, function* () {
         return new Promise((resolved) => __awaiter(void 0, void 0, void 0, function* () {
             const res = yield (0, async_retry_1.default)(() => __awaiter(void 0, void 0, void 0, function* () {
-                return yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing', {
-                    owner,
-                    repo,
-                    workflow_id: workflow.id,
-                });
+                try {
+                    return yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing', {
+                        owner,
+                        repo,
+                        workflow_id: workflow.id,
+                    });
+                }
+                catch (e) {
+                    (0, core_1.warning)(`[WARN] ${e}`);
+                    throw e;
+                }
             }), {
                 retries: 3,
                 factor: 3,

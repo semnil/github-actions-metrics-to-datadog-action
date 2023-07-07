@@ -1,5 +1,6 @@
 import retry from 'async-retry';
 import { Endpoints } from '@octokit/types';
+import { warning } from '@actions/core';
 import { Context } from '@actions/github/lib/context';
 import { Octokit } from '@octokit/core';
 
@@ -86,19 +87,24 @@ const requestActionsBilling = async (
   return await retry(
     async () => {
       try {
-        return await octokit.request(
-          'GET /orgs/{org}/settings/billing/actions',
-          {
-            org: owner,
-          },
-        );
-      } catch (err) {
-        return await octokit.request(
-          'GET /users/{username}/settings/billing/actions',
-          {
-            username: owner,
-          },
-        );
+        try {
+          return await octokit.request(
+            'GET /orgs/{org}/settings/billing/actions',
+            {
+              org: owner,
+            },
+          );
+        } catch (err) {
+          return await octokit.request(
+            'GET /users/{username}/settings/billing/actions',
+            {
+              username: owner,
+            },
+          );
+        }
+      } catch (e) {
+        warning(`[WARN] ${e}`);
+        throw e;
       }
     },
     {
@@ -127,10 +133,15 @@ export const getRepositoryWorkflowsAndBillings = async (
   const repo = context.repo.repo;
   const workflowsRes = await retry(
     async () => {
-      return await octokit.request(
-        'GET /repos/{owner}/{repo}/actions/workflows',
-        { owner, repo },
-      );
+      try {
+        return await octokit.request(
+          'GET /repos/{owner}/{repo}/actions/workflows',
+          { owner, repo },
+        );
+      } catch (e) {
+        warning(`[WARN] ${e}`);
+        throw e;
+      }
     },
     {
       retries: 3,
@@ -148,14 +159,19 @@ export const getRepositoryWorkflowsAndBillings = async (
       return new Promise(async resolved => {
         const res = await retry(
           async () => {
-            return await octokit.request(
-              'GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing',
-              {
-                owner,
-                repo,
-                workflow_id: workflow.id,
-              },
-            );
+            try {
+              return await octokit.request(
+                'GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing',
+                {
+                  owner,
+                  repo,
+                  workflow_id: workflow.id,
+                },
+              );
+            } catch (e) {
+              warning(`[WARN] ${e}`);
+              throw e;
+            }
           },
           {
             retries: 3,
