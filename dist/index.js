@@ -98,14 +98,18 @@ const requestActionsBilling = (context, octokit) => __awaiter(void 0, void 0, vo
     return yield (0, async_retry_1.default)(() => __awaiter(void 0, void 0, void 0, function* () {
         try {
             try {
-                return yield octokit.request('GET /orgs/{org}/settings/billing/actions', {
+                const result = yield octokit.request('GET /orgs/{org}/settings/billing/actions', {
                     org: owner,
                 });
+                (0, core_1.info)(`[INFO] ${JSON.stringify(result)}`);
+                return result;
             }
             catch (err) {
-                return yield octokit.request('GET /users/{username}/settings/billing/actions', {
+                const result = yield octokit.request('GET /users/{username}/settings/billing/actions', {
                     username: owner,
                 });
+                (0, core_1.info)(`[INFO] ${JSON.stringify(result)}`);
+                return result;
             }
         }
         catch (e) {
@@ -125,7 +129,9 @@ const getRepositoryWorkflowsAndBillings = (context, octokit) => __awaiter(void 0
     const repo = context.repo.repo;
     const workflowsRes = yield (0, async_retry_1.default)(() => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            return yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows', { owner, repo });
+            const result = yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows', { owner, repo });
+            (0, core_1.info)(`[INFO] ${JSON.stringify(result)}`);
+            return result;
         }
         catch (e) {
             (0, core_1.warning)(`[WARN] ${e}`);
@@ -143,11 +149,13 @@ const getRepositoryWorkflowsAndBillings = (context, octokit) => __awaiter(void 0
         return new Promise((resolved) => __awaiter(void 0, void 0, void 0, function* () {
             const res = yield (0, async_retry_1.default)(() => __awaiter(void 0, void 0, void 0, function* () {
                 try {
-                    return yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing', {
+                    const result = yield octokit.request('GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing', {
                         owner,
                         repo,
                         workflow_id: workflow.id,
                     });
+                    (0, core_1.info)(`[INFO] ${JSON.stringify(result)}`);
+                    return result;
                 }
                 catch (e) {
                     (0, core_1.warning)(`[WARN] ${e}`);

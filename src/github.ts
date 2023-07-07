@@ -1,6 +1,6 @@
 import retry from 'async-retry';
 import { Endpoints } from '@octokit/types';
-import { warning } from '@actions/core';
+import { info, warning } from '@actions/core';
 import { Context } from '@actions/github/lib/context';
 import { Octokit } from '@octokit/core';
 
@@ -88,19 +88,23 @@ const requestActionsBilling = async (
     async () => {
       try {
         try {
-          return await octokit.request(
+          const result = await octokit.request(
             'GET /orgs/{org}/settings/billing/actions',
             {
               org: owner,
             },
           );
+          info(`[INFO] ${JSON.stringify(result)}`);
+          return result;
         } catch (err) {
-          return await octokit.request(
+          const result = await octokit.request(
             'GET /users/{username}/settings/billing/actions',
             {
               username: owner,
             },
           );
+          info(`[INFO] ${JSON.stringify(result)}`);
+          return result;
         }
       } catch (e) {
         warning(`[WARN] ${e}`);
@@ -134,10 +138,12 @@ export const getRepositoryWorkflowsAndBillings = async (
   const workflowsRes = await retry(
     async () => {
       try {
-        return await octokit.request(
+        const result = await octokit.request(
           'GET /repos/{owner}/{repo}/actions/workflows',
           { owner, repo },
         );
+        info(`[INFO] ${JSON.stringify(result)}`);
+        return result;
       } catch (e) {
         warning(`[WARN] ${e}`);
         throw e;
@@ -160,7 +166,7 @@ export const getRepositoryWorkflowsAndBillings = async (
         const res = await retry(
           async () => {
             try {
-              return await octokit.request(
+              const result = await octokit.request(
                 'GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing',
                 {
                   owner,
@@ -168,6 +174,8 @@ export const getRepositoryWorkflowsAndBillings = async (
                   workflow_id: workflow.id,
                 },
               );
+              info(`[INFO] ${JSON.stringify(result)}`);
+              return result;
             } catch (e) {
               warning(`[WARN] ${e}`);
               throw e;
